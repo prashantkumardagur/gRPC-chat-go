@@ -11,7 +11,7 @@ import (
 //==============================================================================
 
 func Chat(client pb.ChatClient, stream pb.Chat_MessagingClient, username string) {
-	var friend string = ""
+	var friend string = "/broadcast"
 	var message string = ""
 
 	err := stream.Send(&pb.Message{From: username, To: friend, Text: "blank"})

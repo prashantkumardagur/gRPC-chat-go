@@ -31,6 +31,7 @@ func (s *server) CheckUser(ctx context.Context, req *pb.User) (*pb.Response, err
 
 func (s *server) Messaging(stream pb.Chat_MessagingServer) error {
 
+	// gets first message from the user to get the username and register the user
 	message, err := stream.Recv()
 	HandleError(err)
 	var username = message.GetFrom()
@@ -38,8 +39,10 @@ func (s *server) Messaging(stream pb.Chat_MessagingServer) error {
 	Users[username] = make(chan pb.Message)
 	log.Println("User " + username + " connected")
 
+	// goroutine to handle the user's messages
 	go handleChat(stream, Users[username])
 
+	// loop to handle messages from the user
 	for {
 		message, err := stream.Recv()
 		if err == io.EOF {
@@ -53,12 +56,17 @@ func (s *server) Messaging(stream pb.Chat_MessagingServer) error {
 		if message.GetTo() == "/broadcast" {
 			broadcast(*message)
 		} else {
-			Users[message.GetTo()] <- *message
+			if _, ok := Users[message.GetTo()]; ok {
+				Users[message.GetTo()] <- *message
+			} else {
+				Users[username] <- pb.Message{From: "BOT", To: "", Text: "User " + message.GetTo() + " logged out. Please change chennal."}
+			}
 		}
 	}
 	return nil
 }
 
+// handleChat sends a message to the user
 func handleChat(stream pb.Chat_MessagingServer, message chan pb.Message) {
 	for msg := range message {
 		if msg.GetFrom() == "/BOT/" {
@@ -68,6 +76,7 @@ func handleChat(stream pb.Chat_MessagingServer, message chan pb.Message) {
 	}
 }
 
+// broadcast sends a message to all users except the sender
 func broadcast(message pb.Message) {
 	for username, userChan := range Users {
 		if username == message.GetFrom() {
