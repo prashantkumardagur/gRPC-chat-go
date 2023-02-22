@@ -1,0 +1,31 @@
+syntax = "proto3";
+package chat;
+
+option go_package = "./chat";
+
+//==============================================================================
+
+message Empty {}
+
+message Message {
+  string from = 1;
+  string to = 2;
+  string text = 3;
+}
+
+message User {
+  string username = 1;
+}
+
+message Response {
+  bool success = 1;
+  string message = 2;
+}
+
+//==============================================================================
+
+service Chat {
+  rpc Messaging (stream Message) returns (stream Message) {}
+  rpc CheckUser (User) returns (Response) {}
+  rpc GetUsers (Empty) returns (stream User) {}
+}
