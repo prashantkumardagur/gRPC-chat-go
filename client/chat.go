@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"io"
 
 	pb "github.com/prashantkumardagur/grpc-chat/chat"
 )
@@ -14,24 +13,10 @@ func Chat(client pb.ChatClient, stream pb.Chat_MessagingClient, username string)
 	var friend string = "/broadcast"
 	var message string = ""
 
-	err := stream.Send(&pb.Message{From: username, To: friend, Text: "blank"})
-	HandleError(err)
-
 	// ============================================================================
 
-	waitc := make(chan struct{})
-
-	go func() {
-		for {
-			msg, err := stream.Recv()
-			if err == io.EOF {
-				break
-			}
-			HandleError(err)
-			fmt.Print("\r" + msg.GetFrom() + "> " + msg.GetText() + "\n" + username + "> ")
-		}
-		close(waitc)
-	}()
+	waitc := make(chan int)
+	go Reciever(stream, waitc, username)
 
 	// ============================================================================
 
@@ -63,6 +48,7 @@ func Chat(client pb.ChatClient, stream pb.Chat_MessagingClient, username string)
 
 		case "/connect":
 			{
+				// get username from user
 				var temp string
 				fmt.Print("BOT> Enter username: ")
 				Input(&temp)
@@ -70,12 +56,14 @@ func Chat(client pb.ChatClient, stream pb.Chat_MessagingClient, username string)
 					fmt.Println("BOT> You can't connect to yourself")
 					continue
 				}
+
+				// check if the user exists
 				res, err := client.CheckUser(context.Background(), &pb.User{Username: temp})
 				HandleError(err)
-				if res.GetSuccess() {
+				if res.GetSuccess() { // if user exists
 					fmt.Println("BOT> Connected to " + temp)
 					friend = temp
-				} else {
+				} else { // if user doesn't exist
 					fmt.Println("BOT> User not found")
 				}
 			}
@@ -88,10 +76,6 @@ func Chat(client pb.ChatClient, stream pb.Chat_MessagingClient, username string)
 
 		default:
 			{
-				if friend == "" {
-					fmt.Println("BOT> Please connect to a user")
-					continue
-				}
 				err := stream.Send(&pb.Message{From: username, To: friend, Text: message})
 				HandleError(err)
 			}

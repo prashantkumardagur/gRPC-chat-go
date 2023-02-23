@@ -43,25 +43,14 @@ func main() {
 	// ============================================================================
 
 	fmt.Println("BOT> Welcome to gRPC Chat")
-	var username string
-
-	for {
-		fmt.Print("BOT> Enter new username: ")
-		Input(&username)
-
-		res, err := client.CheckUser(context.Background(), &pb.User{Username: username})
-		HandleError(err)
-
-		if res.GetSuccess() {
-			fmt.Println("BOT> User already exists")
-		} else {
-			fmt.Println("BOT> User logged in")
-			break
-		}
-	}
 
 	stream, err := client.Messaging(context.Background())
 	HandleError(err)
-	Chat(client, stream, username)
 
+	// authentication
+	username, authErr := Auth(client, stream)
+	HandleError(authErr)
+
+	// ============================================================================
+	Chat(client, stream, username)
 }
